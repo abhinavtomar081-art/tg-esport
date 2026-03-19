@@ -27,26 +27,57 @@ type EventRow = {
 const SHEET_CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vSQieQgkFoOB1sCdCO71OpPhFaQgntR1LUZt8P5lgRi1LAkOpLCN4VpYOIaJNXoI1tNjtnqnt37VCj_/pub?output=csv";
 
+function parseCSVLine(line: string) {
+  const result: string[] = [];
+  let current = "";
+  let insideQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+
+    if (char === '"') {
+      if (insideQuotes && nextChar === '"') {
+        current += '"';
+        i++;
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+    } else if (char === "," && !insideQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  result.push(current.trim());
+  return result.map((item) => item.replace(/^"|"$/g, "").trim());
+}
+
 export default function EventDetailsPage() {
   const params = useParams();
-  const id = params.id as string;
+  const id = decodeURIComponent((params.id as string) || "")
+    .trim()
+    .toLowerCase();
 
   const [rows, setRows] = useState<EventRow[]>([]);
+  const [eventInfo, setEventInfo] = useState<EventRow | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchSheetData = async () => {
       try {
-        const res = await fetch(SHEET_CSV_URL, { cache: "no-store" });
-        const text = await res.text();
+        const res = await fetch(SHEET_CSV_URL, {
+          cache: "no-store",
+        });
 
+        const text = await res.text();
         const lines = text.trim().split("\n");
         const dataRows = lines.slice(1);
 
         const parsedRows: EventRow[] = dataRows.map((row) => {
-          const cols = row
-            .split(",")
-            .map((col) => col.replace(/^"|"$/g, "").trim());
+          const cols = parseCSVLine(row);
 
           return {
             type: cols[0] || "",
@@ -69,13 +100,21 @@ export default function EventDetailsPage() {
           };
         });
 
-        const filtered = parsedRows.filter(
+        const matchedEventInfo =
+          parsedRows.find(
+            (item) =>
+              item.type.trim().toLowerCase() === "today" &&
+              item.name.trim().toLowerCase() === id
+          ) || null;
+
+        const matchedRows = parsedRows.filter(
           (item) =>
-            item.type.toLowerCase() === "event" &&
-            item.eventId.toLowerCase() === id.toLowerCase()
+            item.type.trim().toLowerCase() === "event" &&
+            item.eventId.trim().toLowerCase() === id
         );
 
-        setRows(filtered);
+        setEventInfo(matchedEventInfo);
+        setRows(matchedRows);
       } catch (error) {
         console.error("Event details fetch error:", error);
       } finally {
@@ -87,27 +126,27 @@ export default function EventDetailsPage() {
   }, [id]);
 
   const ongoingMatches = rows.filter(
-    (item) => item.section.toLowerCase() === "ongoing"
+    (item) => item.section.trim().toLowerCase() === "ongoing"
   );
 
   const upcomingMatches = rows.filter(
-    (item) => item.section.toLowerCase() === "upcoming"
+    (item) => item.section.trim().toLowerCase() === "upcoming"
   );
 
   const completedMatches = rows.filter(
-    (item) => item.section.toLowerCase() === "completed"
+    (item) => item.section.trim().toLowerCase() === "completed"
   );
 
-  const eventInfo = rows[0]
+  const finalEventInfo = eventInfo
     ? {
-        name: rows[0].eventId,
-        date: rows[0].date,
-        timing: rows[0].timing,
-        stage: rows[0].stage,
-        liveOn: rows[0].liveOn,
+        name: eventInfo.name || "-",
+        date: eventInfo.date || "-",
+        timing: eventInfo.timing || "-",
+        stage: eventInfo.stage || "-",
+        liveOn: eventInfo.liveOn || "-",
       }
     : {
-        name: id,
+        name: decodeURIComponent((params.id as string) || ""),
         date: "-",
         timing: "-",
         stage: "-",
@@ -128,26 +167,30 @@ export default function EventDetailsPage() {
     return (
       <div key={index} className={`mb-4 rounded-2xl p-4 ${styles[type]}`}>
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-lg font-bold text-white">{item.match}</p>
-          <p className="text-sm font-semibold text-white/80">{item.map}</p>
+          <p className="text-lg font-bold text-white">{item.match || "-"}</p>
+          <p className="text-sm font-semibold text-white/80">{item.map || "-"}</p>
         </div>
 
         <div className="grid grid-cols-3 gap-3 text-center">
           <div className="rounded-xl bg-black/20 p-3">
             <p className="text-xs text-white/60">Placement Point</p>
             <p className="mt-1 text-lg font-bold text-white">
-              {item.placement}
+              {item.placement || "-"}
             </p>
           </div>
 
           <div className="rounded-xl bg-black/20 p-3">
             <p className="text-xs text-white/60">Kill Point</p>
-            <p className="mt-1 text-lg font-bold text-white">{item.kill}</p>
+            <p className="mt-1 text-lg font-bold text-white">
+              {item.kill || "-"}
+            </p>
           </div>
 
           <div className="rounded-xl bg-black/20 p-3">
             <p className="text-xs text-white/60">Total Points</p>
-            <p className="mt-1 text-lg font-bold text-white">{item.total}</p>
+            <p className="mt-1 text-lg font-bold text-white">
+              {item.total || "-"}
+            </p>
           </div>
         </div>
       </div>
@@ -155,7 +198,7 @@ export default function EventDetailsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#140505] px-4 pt-6 pb-10 text-white">
+    <div className="min-h-screen bg-[#140505] px-4 pb-10 pt-6 text-white">
       <div className="mx-auto max-w-5xl">
         <div className="mb-6 flex items-center justify-between">
           <Link
@@ -178,33 +221,43 @@ export default function EventDetailsPage() {
           <>
             <div className="mb-6 rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur-xl">
               <h2 className="mb-4 text-center text-2xl font-extrabold text-white">
-                {eventInfo.name}
+                {finalEventInfo.name}
               </h2>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-xl bg-black/20 p-3">
                   <p className="text-xs text-white/60">Event Name</p>
-                  <p className="mt-1 font-bold text-white">{eventInfo.name}</p>
+                  <p className="mt-1 font-bold text-white">
+                    {finalEventInfo.name}
+                  </p>
                 </div>
 
                 <div className="rounded-xl bg-black/20 p-3">
                   <p className="text-xs text-white/60">Date</p>
-                  <p className="mt-1 font-bold text-white">{eventInfo.date}</p>
+                  <p className="mt-1 font-bold text-white">
+                    {finalEventInfo.date}
+                  </p>
                 </div>
 
                 <div className="rounded-xl bg-black/20 p-3">
                   <p className="text-xs text-white/60">Timing</p>
-                  <p className="mt-1 font-bold text-white">{eventInfo.timing}</p>
+                  <p className="mt-1 font-bold text-white">
+                    {finalEventInfo.timing}
+                  </p>
                 </div>
 
                 <div className="rounded-xl bg-black/20 p-3">
                   <p className="text-xs text-white/60">Stage</p>
-                  <p className="mt-1 font-bold text-white">{eventInfo.stage}</p>
+                  <p className="mt-1 font-bold text-white">
+                    {finalEventInfo.stage}
+                  </p>
                 </div>
 
                 <div className="rounded-xl bg-black/20 p-3 sm:col-span-2">
                   <p className="text-xs text-white/60">Live On</p>
-                  <p className="mt-1 font-bold text-white">{eventInfo.liveOn}</p>
+                  <p className="mt-1 font-bold text-white">
+                    {finalEventInfo.liveOn}
+                  </p>
                 </div>
               </div>
             </div>

@@ -86,6 +86,13 @@ export default function TodaySchedulePage() {
     (item) => item.status.toLowerCase() === "completed"
   );
 
+  const getSafeLink = (link: string) => {
+    const trimmedLink = link.trim();
+    return trimmedLink.startsWith("http")
+      ? trimmedLink
+      : `https://${trimmedLink}`;
+  };
+
   const renderEventCard = (
     item: EventItem,
     index: number,
@@ -135,7 +142,7 @@ export default function TodaySchedulePage() {
           </div>
 
           <a
-            href={item.link}
+            href={getSafeLink(item.link)}
             target="_blank"
             rel="noopener noreferrer"
             className={`rounded-lg px-3 py-1 text-xs font-semibold ${style.button}`}

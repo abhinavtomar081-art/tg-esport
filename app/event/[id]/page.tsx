@@ -83,8 +83,7 @@ function buildDateTime(date: string, time: string) {
   if (!date || !time || date === "-" || time === "-") return null;
 
   const safeTime = time.length === 5 ? `${time}:00` : time;
-  const full = `${date}T${safeTime}`;
-  const parsed = new Date(full);
+  const parsed = new Date(`${date}T${safeTime}`);
 
   if (Number.isNaN(parsed.getTime())) return null;
   return parsed;
@@ -96,7 +95,6 @@ function getTimeStatus(date: string, startTime: string, endTime: string) {
   const end = buildDateTime(date, endTime);
 
   if (!start || !end) return "upcoming";
-
   if (now < start) return "upcoming";
   if (now > end) return "completed";
   return "ongoing";
@@ -123,19 +121,16 @@ function sortByStartTime(items: EventRow[]) {
 
 export default function EventDetailsPage() {
   const params = useParams();
-  const rawId = ((params.eventId ?? params.id ?? "") as string).trim();
+  const rawId = ((params.eventId ?? "") as string).trim();
   const id = decodeURIComponent(rawId).toLowerCase();
 
   const [allRows, setAllRows] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchSheetData = async () => {
+    async function fetchSheetData() {
       try {
-        const res = await fetch(SHEET_CSV_URL, {
-          cache: "no-store",
-        });
-
+        const res = await fetch(SHEET_CSV_URL, { cache: "no-store" });
         const text = await res.text();
         const parsed = parseCSV(text);
 
@@ -163,7 +158,7 @@ export default function EventDetailsPage() {
       } finally {
         setLoading(false);
       }
-    };
+    }
 
     fetchSheetData();
   }, []);
@@ -306,49 +301,36 @@ export default function EventDetailsPage() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-xl bg-black/20 p-3">
                   <p className="text-xs text-white/60">Event Name</p>
-                  <p className="mt-1 font-bold text-white">
-                    {finalEventInfo.name}
-                  </p>
+                  <p className="mt-1 font-bold text-white">{finalEventInfo.name}</p>
                 </div>
 
                 <div className="rounded-xl bg-black/20 p-3">
                   <p className="text-xs text-white/60">Date</p>
-                  <p className="mt-1 font-bold text-white">
-                    {finalEventInfo.date}
-                  </p>
+                  <p className="mt-1 font-bold text-white">{finalEventInfo.date}</p>
                 </div>
 
                 <div className="rounded-xl bg-black/20 p-3">
                   <p className="text-xs text-white/60">Timing</p>
-                  <p className="mt-1 font-bold text-white">
-                    {finalEventInfo.timing}
-                  </p>
+                  <p className="mt-1 font-bold text-white">{finalEventInfo.timing}</p>
                 </div>
 
                 <div className="rounded-xl bg-black/20 p-3">
                   <p className="text-xs text-white/60">Stage</p>
-                  <p className="mt-1 font-bold text-white">
-                    {finalEventInfo.stage}
-                  </p>
+                  <p className="mt-1 font-bold text-white">{finalEventInfo.stage}</p>
                 </div>
 
                 <div className="rounded-xl bg-black/20 p-3">
                   <p className="text-xs text-white/60">Live On</p>
-                  <p className="mt-1 font-bold text-white">
-                    {finalEventInfo.liveOn}
-                  </p>
+                  <p className="mt-1 font-bold text-white">{finalEventInfo.liveOn}</p>
                 </div>
 
                 <div className="rounded-xl bg-black/20 p-3">
                   <p className="text-xs text-white/60">Channel</p>
-                  <p className="mt-1 font-bold text-white">
-                    {finalEventInfo.channel}
-                  </p>
+                  <p className="mt-1 font-bold text-white">{finalEventInfo.channel}</p>
                 </div>
 
                 <div className="rounded-xl bg-black/20 p-3 sm:col-span-2">
                   <p className="text-xs text-white/60">Live Link</p>
-
                   {finalEventInfo.link ? (
                     <a
                       href={finalEventInfo.link}

@@ -11,7 +11,6 @@ type EventRow = {
   startTime: string;
   endTime: string;
   stage: string;
-  liveOn: string;
   channel: string;
   link: string;
 };
@@ -48,11 +47,7 @@ function parseCSVLine(line: string) {
 }
 
 function parseCSV(text: string) {
-  const lines = text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-
+  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
   if (lines.length < 2) return [];
 
   const headers = parseCSVLine(lines[0]);
@@ -61,322 +56,170 @@ function parseCSV(text: string) {
     const values = parseCSVLine(line);
     const row: Record<string, string> = {};
 
-    headers.forEach((header, index) => {
-      row[header] = values[index] || "";
-    });
-
+    headers.forEach((h, i) => (row[h] = values[i] || ""));
     return row;
   });
 }
 
 function buildDateTime(date: string, time: string) {
-  if (!date || !time || date === "-" || time === "-") return null;
-
-  const safeTime = time.length === 5 ? `${time}:00` : time;
-  const parsed = new Date(`${date}T${safeTime}+05:30`);
-
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed;
+  if (!date || !time) return null;
+  return new Date(`${date}T${time}:00+05:30`);
 }
 
-function getStatus(date: string, startTime: string, endTime: string) {
+function getStatus(date: string, start: string, end: string) {
   const now = new Date();
-  const start = buildDateTime(date, startTime);
-  const end = buildDateTime(date, endTime);
+  const s = buildDateTime(date, start);
+  const e = buildDateTime(date, end);
 
-  if (!start || !end) return "upcoming";
-  if (now < start) return "upcoming";
-  if (now > end) return "completed";
+  if (!s || !e) return "upcoming";
+  if (now < s) return "upcoming";
+  if (now > e) return "completed";
   return "ongoing";
 }
 
-function formatTimeRange(startTime: string, endTime: string) {
-  if (!startTime && !endTime) return "-";
-  if (!endTime || endTime === "-") return startTime || "-";
-  return `${startTime} - ${endTime}`;
+function formatTime(start: string, end: string) {
+  return `${start} - ${end}`;
 }
 
-function formatCurrentDateTime() {
-  return new Date().toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-}
-
-function sortByStartTime(items: EventRow[]) {
-  return [...items].sort((a, b) => {
-    const aDate = buildDateTime(a.date, a.startTime);
-    const bDate = buildDateTime(b.date, b.startTime);
-
-    if (!aDate && !bDate) return 0;
-    if (!aDate) return 1;
-    if (!bDate) return -1;
-
-    return aDate.getTime() - bDate.getTime();
-  });
+function formatNow() {
+  return new Date().toLocaleString("en-IN");
 }
 
 function YouTubeButton({ link }: { link: string }) {
-  if (!link) {
-    return (
-      <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/40">
+  return (
+    <a href={link} target="_blank" rel="noopener noreferrer">
+      <div className="flex items-center justify-center w-14 h-14 bg-red-600 rounded-2xl hover:bg-red-700 transition">
+        {/* BIG YOUTUBE ICON */}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
-          fill="currentColor"
-          className="h-5 w-5"
+          fill="white"
+          className="w-7 h-7"
         >
           <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8ZM9.6 15.7V8.3l6.4 3.7-6.4 3.7Z" />
         </svg>
       </div>
-    );
-  }
-
-  return (
-    <a
-      href={link}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-red-600 shadow-lg transition hover:scale-105 hover:bg-red-700"
-      aria-label="Open YouTube live"
-      title="Open Live"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="white"
-        className="h-5 w-5"
-      >
-        <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8ZM9.6 15.7V8.3l6.4 3.7-6.4 3.7Z" />
-      </svg>
     </a>
   );
 }
 
-function EventCard({ event }: { event: EventRow }) {
+function EventCard({ e }: { e: EventRow }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 p-4 shadow-xl backdrop-blur-sm">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="rounded-lg border border-red-500/30 bg-red-600/20 px-2.5 py-1 text-xs font-bold tracking-wide text-red-200">
-              {event.eventId || "-"}
-            </span>
+    <div className="rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur-sm">
+      <div className="flex justify-between gap-4">
 
-            <Link
-              href={`/today-schedule/${event.eventId}`}
-              className="text-lg font-extrabold tracking-wide text-white transition hover:text-red-400"
-            >
-              {event.name || "-"}
-            </Link>
-          </div>
+        <div className="flex-1">
+          <Link href={`/today-schedule/${e.eventId}`}>
+            <h3 className="text-lg font-bold hover:text-red-400 cursor-pointer">
+              {e.name}
+            </h3>
+          </Link>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <p className="text-[11px] uppercase tracking-wider text-white/50">
-                Date
-              </p>
-              <p className="mt-1 text-sm font-semibold text-white">
-                {event.date || "-"}
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <p className="text-[11px] uppercase tracking-wider text-white/50">
-                Time
-              </p>
-              <p className="mt-1 text-sm font-semibold text-white">
-                {formatTimeRange(event.startTime, event.endTime)}
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <p className="text-[11px] uppercase tracking-wider text-white/50">
-                Stage
-              </p>
-              <p className="mt-1 text-sm font-semibold text-white">
-                {event.stage || "-"}
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <p className="text-[11px] uppercase tracking-wider text-white/50">
-                Live On
-              </p>
-              <p className="mt-1 text-sm font-semibold text-white">
-                {event.liveOn || "-"}
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3 sm:col-span-2">
-              <p className="text-[11px] uppercase tracking-wider text-white/50">
-                Channel
-              </p>
-              <p className="mt-1 text-sm font-semibold text-white">
-                {event.channel || "-"}
-              </p>
-            </div>
-          </div>
+          <p className="text-sm text-white/70 mt-1">{e.date}</p>
+          <p className="text-sm text-white/70">
+            {formatTime(e.startTime, e.endTime)}
+          </p>
+          <p className="text-sm text-white/70">{e.stage}</p>
+          <p className="text-sm text-white/70">{e.channel}</p>
         </div>
 
-        <div className="shrink-0">
-          <YouTubeButton link={event.link} />
-        </div>
+        <YouTubeButton link={e.link} />
       </div>
     </div>
   );
 }
 
-function EventSection({
+function Section({
   title,
-  titleColor,
-  emptyText,
   events,
-}: {
-  title: string;
-  titleColor: string;
-  emptyText: string;
-  events: EventRow[];
-}) {
+  empty,
+  color,
+}: any) {
   return (
-    <section className="mt-8">
-      <h2 className={`mb-4 text-xl font-extrabold tracking-wide ${titleColor}`}>
-        {title}
-      </h2>
+    <div className="mt-6">
+      <h2 className={`text-xl font-bold ${color}`}>{title}</h2>
 
-      {events.length > 0 ? (
-        <div className="grid gap-4">
-          {events.map((event) => (
-            <EventCard key={event.eventId} event={event} />
-          ))}
-        </div>
+      {events.length ? (
+        events.map((e: any) => <EventCard key={e.eventId} e={e} />)
       ) : (
-        <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-5 text-sm font-medium text-white/60">
-          {emptyText}
-        </div>
+        <p className="text-white/60 mt-2">{empty}</p>
       )}
-    </section>
+    </div>
   );
 }
 
-export default function TodaySchedulePage() {
-  const [rows, setRows] = useState<EventRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentTime, setCurrentTime] = useState(formatCurrentDateTime());
+export default function Page() {
+  const [events, setEvents] = useState<EventRow[]>([]);
+  const [time, setTime] = useState(formatNow());
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(formatCurrentDateTime());
-    }, 1000);
-
-    return () => clearInterval(timer);
+    const t = setInterval(() => setTime(formatNow()), 1000);
+    return () => clearInterval(t);
   }, []);
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const res = await fetch(SHEET_CSV_URL, { cache: "no-store" });
-        const text = await res.text();
-        const parsedRows = parseCSV(text);
+    async function load() {
+      const res = await fetch(SHEET_CSV_URL);
+      const text = await res.text();
+      const data = parseCSV(text);
 
-        const eventRows: EventRow[] = parsedRows
-          .filter((row) => (row.type || "").trim().toLowerCase() === "event")
-          .map((row) => ({
-            type: row.type || "",
-            eventId: row.eventId || "",
-            name: row.name || "",
-            date: row.date || "",
-            startTime: row.startTime || "",
-            endTime: row.endTime || "",
-            stage: row.stage || "",
-            liveOn: row.liveOn || "",
-            channel: row.channel || "",
-            link: row.link || "",
-          }));
-
-        setRows(sortByStartTime(eventRows));
-      } catch (error) {
-        console.error("CSV fetch error:", error);
-      } finally {
-        setLoading(false);
-      }
+      setEvents(
+        data
+          .filter((r) => r.type === "event")
+          .map((r) => ({
+            type: r.type,
+            eventId: r.eventId,
+            name: r.name,
+            date: r.date,
+            startTime: r.startTime,
+            endTime: r.endTime,
+            stage: r.stage,
+            channel: r.channel,
+            link: r.link,
+          }))
+      );
     }
 
-    loadData();
+    load();
   }, []);
 
-  const ongoingEvents = useMemo(() => {
-    return rows.filter(
-      (event) => getStatus(event.date, event.startTime, event.endTime) === "ongoing"
-    );
-  }, [rows]);
+  const ongoing = events.filter(
+    (e) => getStatus(e.date, e.startTime, e.endTime) === "ongoing"
+  );
 
-  const upcomingEvents = useMemo(() => {
-    return rows.filter(
-      (event) => getStatus(event.date, event.startTime, event.endTime) === "upcoming"
-    );
-  }, [rows]);
+  const upcoming = events.filter(
+    (e) => getStatus(e.date, e.startTime, e.endTime) === "upcoming"
+  );
 
-  const completedEvents = useMemo(() => {
-    return rows.filter(
-      (event) => getStatus(event.date, event.startTime, event.endTime) === "completed"
-    );
-  }, [rows]);
+  const completed = events.filter(
+    (e) => getStatus(e.date, e.startTime, e.endTime) === "completed"
+  );
 
   return (
-    <main className="min-h-screen px-4 py-6 text-white md:px-8">
-      <div className="mx-auto max-w-5xl">
-        <div className="rounded-3xl border border-white/10 bg-black/20 p-5 backdrop-blur-sm">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-wide text-white">
-                TODAY SCHEDULE
-              </h1>
-              <p className="mt-1 text-sm font-semibold text-red-300">
-                iQOO TOTAL GAMING ESPORT
-              </p>
-            </div>
+    <div className="min-h-screen p-4 text-white">
+      <h1 className="text-2xl font-bold">TODAY SCHEDULE</h1>
+      <p className="text-sm">{time}</p>
 
-            <div className="rounded-2xl border border-red-500/20 bg-red-600/10 px-4 py-2 text-sm font-semibold text-white">
-              {currentTime}
-            </div>
-          </div>
-        </div>
+      <Section
+        title="ONGOING"
+        color="text-red-400"
+        events={ongoing}
+        empty="There is no ongoing event"
+      />
 
-        {loading ? (
-          <div className="mt-8 rounded-2xl border border-white/10 bg-black/20 p-6 text-center text-white/70">
-            Loading schedule...
-          </div>
-        ) : (
-          <>
-            <EventSection
-              title="ONGOING"
-              titleColor="text-red-400"
-              emptyText="There is no ongoing event"
-              events={ongoingEvents}
-            />
+      <Section
+        title="UPCOMING"
+        color="text-yellow-400"
+        events={upcoming}
+        empty="There is no upcoming event"
+      />
 
-            <EventSection
-              title="UPCOMING"
-              titleColor="text-yellow-400"
-              emptyText="There is no upcoming event"
-              events={upcomingEvents}
-            />
-
-            <EventSection
-              title="COMPLETED"
-              titleColor="text-green-400"
-              emptyText="There is no completed event"
-              events={completedEvents}
-            />
-          </>
-        )}
-      </div>
-    </main>
+      <Section
+        title="COMPLETED"
+        color="text-green-400"
+        events={completed}
+        empty="There is no completed event"
+      />
+    </div>
   );
 }

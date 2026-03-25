@@ -2,22 +2,20 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type EventRow = {
   type: string;
-  name: string;
-  channel: string;
-  link: string;
-  status: string;
-  logo: string;
   eventId: string;
+  name: string;
   date: string;
-  timing: string;
+  startTime: string;
+  endTime: string;
   stage: string;
   liveOn: string;
+  channel: string;
+  link: string;
   match: string;
-  section: string;
   map: string;
   placement: string;
   kill: string;
@@ -44,25 +42,91 @@ function parseCSVLine(line: string) {
         insideQuotes = !insideQuotes;
       }
     } else if (char === "," && !insideQuotes) {
-      result.push(current.trim());
+      result.push(current);
       current = "";
     } else {
       current += char;
     }
   }
 
-  result.push(current.trim());
+  result.push(current);
   return result.map((item) => item.replace(/^"|"$/g, "").trim());
+}
+
+function parseCSV(text: string) {
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length < 2) return [];
+
+  const headers = parseCSVLine(lines[0]);
+
+  return lines.slice(1).map((line) => {
+    const values = parseCSVLine(line);
+    const row: Record<string, string> = {};
+
+    headers.forEach((header, index) => {
+      row[header] = values[index] || "";
+    });
+
+    return row;
+  });
+}
+
+function normalize(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function buildDateTime(date: string, time: string) {
+  if (!date || !time || date === "-" || time === "-") return null;
+
+  const safeTime = time.length === 5 ? `${time}:00` : time;
+  const full = `${date}T${safeTime}`;
+  const parsed = new Date(full);
+
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+}
+
+function getTimeStatus(date: string, startTime: string, endTime: string) {
+  const now = new Date();
+  const start = buildDateTime(date, startTime);
+  const end = buildDateTime(date, endTime);
+
+  if (!start || !end) return "upcoming";
+
+  if (now < start) return "upcoming";
+  if (now > end) return "completed";
+  return "ongoing";
+}
+
+function formatTiming(startTime: string, endTime: string) {
+  if (!startTime && !endTime) return "-";
+  if (!endTime || endTime === "-") return startTime || "-";
+  return `${startTime} - ${endTime}`;
+}
+
+function sortByStartTime(items: EventRow[]) {
+  return [...items].sort((a, b) => {
+    const aDate = buildDateTime(a.date, a.startTime);
+    const bDate = buildDateTime(b.date, b.startTime);
+
+    if (!aDate && !bDate) return 0;
+    if (!aDate) return 1;
+    if (!bDate) return -1;
+
+    return aDate.getTime() - bDate.getTime();
+  });
 }
 
 export default function EventDetailsPage() {
   const params = useParams();
-  const id = decodeURIComponent((params.id as string) || "")
-    .trim()
-    .toLowerCase();
+  const rawId = ((params.eventId ?? params.id ?? "") as string).trim();
+  const id = decodeURIComponent(rawId).toLowerCase();
 
-  const [rows, setRows] = useState<EventRow[]>([]);
-  const [eventInfo, setEventInfo] = useState<EventRow | null>(null);
+  const [allRows, setAllRows] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -73,48 +137,27 @@ export default function EventDetailsPage() {
         });
 
         const text = await res.text();
-        const lines = text.trim().split("\n");
-        const dataRows = lines.slice(1);
+        const parsed = parseCSV(text);
 
-        const parsedRows: EventRow[] = dataRows.map((row) => {
-          const cols = parseCSVLine(row);
+        const formattedRows: EventRow[] = parsed.map((row) => ({
+          type: row.type || "",
+          eventId: row.eventId || "",
+          name: row.name || "",
+          date: row.date || "",
+          startTime: row.startTime || "",
+          endTime: row.endTime || "",
+          stage: row.stage || "",
+          liveOn: row.liveOn || "",
+          channel: row.channel || "",
+          link: row.link || "",
+          match: row.match || "",
+          map: row.map || "",
+          placement: row.placement || "",
+          kill: row.kill || "",
+          total: row.total || "",
+        }));
 
-          return {
-            type: cols[0] || "",
-            name: cols[1] || "",
-            channel: cols[2] || "",
-            link: cols[3] || "",
-            status: cols[4] || "",
-            logo: cols[5] || "",
-            eventId: cols[6] || "",
-            date: cols[7] || "",
-            timing: cols[8] || "",
-            stage: cols[9] || "",
-            liveOn: cols[10] || "",
-            match: cols[11] || "",
-            section: cols[12] || "",
-            map: cols[13] || "",
-            placement: cols[14] || "",
-            kill: cols[15] || "",
-            total: cols[16] || "",
-          };
-        });
-
-        const matchedEventInfo =
-          parsedRows.find(
-            (item) =>
-              item.type.trim().toLowerCase() === "today" &&
-              item.name.trim().toLowerCase() === id
-          ) || null;
-
-        const matchedRows = parsedRows.filter(
-          (item) =>
-            item.type.trim().toLowerCase() === "event" &&
-            item.eventId.trim().toLowerCase() === id
-        );
-
-        setEventInfo(matchedEventInfo);
-        setRows(matchedRows);
+        setAllRows(formattedRows);
       } catch (error) {
         console.error("Event details fetch error:", error);
       } finally {
@@ -123,34 +166,64 @@ export default function EventDetailsPage() {
     };
 
     fetchSheetData();
-  }, [id]);
+  }, []);
 
-  const ongoingMatches = rows.filter(
-    (item) => item.section.trim().toLowerCase() === "ongoing"
-  );
+  const eventInfo = useMemo(() => {
+    return (
+      allRows.find(
+        (item) =>
+          normalize(item.type) === "event" &&
+          normalize(item.eventId) === id
+      ) || null
+    );
+  }, [allRows, id]);
 
-  const upcomingMatches = rows.filter(
-    (item) => item.section.trim().toLowerCase() === "upcoming"
-  );
+  const matchRows = useMemo(() => {
+    const filtered = allRows.filter(
+      (item) =>
+        normalize(item.type) === "match" &&
+        normalize(item.eventId) === id
+    );
 
-  const completedMatches = rows.filter(
-    (item) => item.section.trim().toLowerCase() === "completed"
-  );
+    return sortByStartTime(filtered);
+  }, [allRows, id]);
+
+  const ongoingMatches = useMemo(() => {
+    return matchRows.filter(
+      (item) => getTimeStatus(item.date, item.startTime, item.endTime) === "ongoing"
+    );
+  }, [matchRows]);
+
+  const upcomingMatches = useMemo(() => {
+    return matchRows.filter(
+      (item) => getTimeStatus(item.date, item.startTime, item.endTime) === "upcoming"
+    );
+  }, [matchRows]);
+
+  const completedMatches = useMemo(() => {
+    return matchRows.filter(
+      (item) => getTimeStatus(item.date, item.startTime, item.endTime) === "completed"
+    );
+  }, [matchRows]);
 
   const finalEventInfo = eventInfo
     ? {
-        name: eventInfo.name || "-",
+        name: eventInfo.name || rawId || "-",
         date: eventInfo.date || "-",
-        timing: eventInfo.timing || "-",
+        timing: formatTiming(eventInfo.startTime, eventInfo.endTime),
         stage: eventInfo.stage || "-",
         liveOn: eventInfo.liveOn || "-",
+        channel: eventInfo.channel || "-",
+        link: eventInfo.link || "",
       }
     : {
-        name: decodeURIComponent((params.id as string) || ""),
+        name: rawId || "-",
         date: "-",
         timing: "-",
         stage: "-",
         liveOn: "-",
+        channel: "-",
+        link: "",
       };
 
   const renderMatchCard = (
@@ -165,9 +238,15 @@ export default function EventDetailsPage() {
     };
 
     return (
-      <div key={index} className={`mb-4 rounded-2xl p-4 ${styles[type]}`}>
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-lg font-bold text-white">{item.match || "-"}</p>
+      <div key={`${item.match}-${index}`} className={`mb-4 rounded-2xl p-4 ${styles[type]}`}>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-lg font-bold text-white">{item.match || "-"}</p>
+            <p className="text-xs text-white/60">
+              {formatTiming(item.startTime, item.endTime)}
+            </p>
+          </div>
+
           <p className="text-sm font-semibold text-white/80">{item.map || "-"}</p>
         </div>
 
@@ -253,11 +332,35 @@ export default function EventDetailsPage() {
                   </p>
                 </div>
 
-                <div className="rounded-xl bg-black/20 p-3 sm:col-span-2">
+                <div className="rounded-xl bg-black/20 p-3">
                   <p className="text-xs text-white/60">Live On</p>
                   <p className="mt-1 font-bold text-white">
                     {finalEventInfo.liveOn}
                   </p>
+                </div>
+
+                <div className="rounded-xl bg-black/20 p-3">
+                  <p className="text-xs text-white/60">Channel</p>
+                  <p className="mt-1 font-bold text-white">
+                    {finalEventInfo.channel}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-black/20 p-3 sm:col-span-2">
+                  <p className="text-xs text-white/60">Live Link</p>
+
+                  {finalEventInfo.link ? (
+                    <a
+                      href={finalEventInfo.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-block rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                    >
+                      Open Live
+                    </a>
+                  ) : (
+                    <p className="mt-1 font-bold text-white">-</p>
+                  )}
                 </div>
               </div>
             </div>

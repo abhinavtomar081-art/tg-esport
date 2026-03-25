@@ -47,7 +47,11 @@ function parseCSVLine(line: string) {
 }
 
 function parseCSV(text: string) {
-  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+
   if (lines.length < 2) return [];
 
   const headers = parseCSVLine(lines[0]);
@@ -56,14 +60,22 @@ function parseCSV(text: string) {
     const values = parseCSVLine(line);
     const row: Record<string, string> = {};
 
-    headers.forEach((h, i) => (row[h] = values[i] || ""));
+    headers.forEach((h, i) => {
+      row[h] = values[i] || "";
+    });
+
     return row;
   });
 }
 
 function buildDateTime(date: string, time: string) {
-  if (!date || !time) return null;
-  return new Date(`${date}T${time}:00+05:30`);
+  if (!date || !time || date === "-" || time === "-") return null;
+
+  const safeTime = time.length === 5 ? `${time}:00` : time;
+  const parsed = new Date(`${date}T${safeTime}+05:30`);
+
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
 }
 
 function getStatus(date: string, start: string, end: string) {
@@ -78,148 +90,295 @@ function getStatus(date: string, start: string, end: string) {
 }
 
 function formatTime(start: string, end: string) {
+  if (!start && !end) return "-";
+  if (!end || end === "-") return start || "-";
   return `${start} - ${end}`;
 }
 
 function formatNow() {
-  return new Date().toLocaleString("en-IN");
+  return new Date().toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+}
+
+function sortByStartTime(items: EventRow[]) {
+  return [...items].sort((a, b) => {
+    const aDate = buildDateTime(a.date, a.startTime);
+    const bDate = buildDateTime(b.date, b.startTime);
+
+    if (!aDate && !bDate) return 0;
+    if (!aDate) return 1;
+    if (!bDate) return -1;
+
+    return aDate.getTime() - bDate.getTime();
+  });
 }
 
 function YouTubeButton({ link }: { link: string }) {
-  return (
-    <a href={link} target="_blank" rel="noopener noreferrer">
-      <div className="flex items-center justify-center w-14 h-14 bg-red-600 rounded-2xl hover:bg-red-700 transition">
-        {/* BIG YOUTUBE ICON */}
+  if (!link) {
+    return (
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-white/40">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
-          fill="white"
-          className="w-7 h-7"
+          fill="currentColor"
+          className="h-7 w-7"
         >
           <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8ZM9.6 15.7V8.3l6.4 3.7-6.4 3.7Z" />
         </svg>
       </div>
+    );
+  }
+
+  return (
+    <a
+      href={link}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group flex h-14 w-14 items-center justify-center rounded-2xl bg-red-600 shadow-[0_0_20px_rgba(220,38,38,0.45)] transition duration-300 hover:scale-110 hover:bg-red-700 hover:shadow-[0_0_30px_rgba(239,68,68,0.75)]"
+      aria-label="Open YouTube live"
+      title="Open Live"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="white"
+        className="h-8 w-8 transition duration-300 group-hover:scale-110"
+      >
+        <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8ZM9.6 15.7V8.3l6.4 3.7-6.4 3.7Z" />
+      </svg>
     </a>
   );
 }
 
-function EventCard({ e }: { e: EventRow }) {
+function LiveBadge() {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur-sm">
-      <div className="flex justify-between gap-4">
+    <div className="inline-flex items-center gap-2 rounded-full border border-red-400/40 bg-red-500/15 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-red-300 shadow-[0_0_18px_rgba(248,113,113,0.35)]">
+      <span className="relative flex h-2.5 w-2.5">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500"></span>
+      </span>
+      Live
+    </div>
+  );
+}
 
-        <div className="flex-1">
-          <Link href={`/today-schedule/${e.eventId}`}>
-            <h3 className="text-lg font-bold hover:text-red-400 cursor-pointer">
-              {e.name}
-            </h3>
+function InfoBox({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-white/15 bg-white/10 p-3 backdrop-blur-md">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-semibold text-white">
+        {value || "-"}
+      </p>
+    </div>
+  );
+}
+
+function EventCard({
+  event,
+  status,
+}: {
+  event: EventRow;
+  status: "ongoing" | "upcoming" | "completed";
+}) {
+  return (
+    <div className="rounded-3xl border border-white/15 bg-white/8 p-4 shadow-[0_10px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-red-400/30 hover:bg-white/12">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="rounded-lg border border-red-500/30 bg-red-500/15 px-2.5 py-1 text-xs font-bold tracking-wide text-red-200">
+              {event.eventId || "-"}
+            </span>
+
+            {status === "ongoing" && <LiveBadge />}
+          </div>
+
+          <Link
+            href={`/today-schedule/${event.eventId}`}
+            className="inline-block text-xl font-extrabold tracking-wide text-white transition duration-300 hover:text-red-400 hover:drop-shadow-[0_0_12px_rgba(248,113,113,0.45)]"
+          >
+            {event.name || "-"}
           </Link>
 
-          <p className="text-sm text-white/70 mt-1">{e.date}</p>
-          <p className="text-sm text-white/70">
-            {formatTime(e.startTime, e.endTime)}
-          </p>
-          <p className="text-sm text-white/70">{e.stage}</p>
-          <p className="text-sm text-white/70">{e.channel}</p>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <InfoBox label="Date" value={event.date || "-"} />
+            <InfoBox label="Time" value={formatTime(event.startTime, event.endTime)} />
+            <InfoBox label="Stage" value={event.stage || "-"} />
+            <InfoBox label="Channel" value={event.channel || "-"} />
+          </div>
         </div>
 
-        <YouTubeButton link={e.link} />
+        <div className="shrink-0 pt-1">
+          <YouTubeButton link={event.link} />
+        </div>
       </div>
     </div>
   );
 }
 
-function Section({
+function EventSection({
   title,
+  titleColor,
+  emptyText,
   events,
-  empty,
-  color,
-}: any) {
+  status,
+}: {
+  title: string;
+  titleColor: string;
+  emptyText: string;
+  events: EventRow[];
+  status: "ongoing" | "upcoming" | "completed";
+}) {
   return (
-    <div className="mt-6">
-      <h2 className={`text-xl font-bold ${color}`}>{title}</h2>
+    <section className="mt-8">
+      <h2 className={`mb-4 text-xl font-extrabold tracking-[0.2em] ${titleColor}`}>
+        {title}
+      </h2>
 
-      {events.length ? (
-        events.map((e: any) => <EventCard key={e.eventId} e={e} />)
+      {events.length > 0 ? (
+        <div className="grid gap-4">
+          {events.map((event) => (
+            <EventCard key={event.eventId} event={event} status={status} />
+          ))}
+        </div>
       ) : (
-        <p className="text-white/60 mt-2">{empty}</p>
+        <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 p-5 text-sm font-medium text-white/65 backdrop-blur-md">
+          {emptyText}
+        </div>
       )}
-    </div>
+    </section>
   );
 }
 
-export default function Page() {
-  const [events, setEvents] = useState<EventRow[]>([]);
-  const [time, setTime] = useState(formatNow());
+export default function TodaySchedulePage() {
+  const [rows, setRows] = useState<EventRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(formatNow());
 
   useEffect(() => {
-    const t = setInterval(() => setTime(formatNow()), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => {
+      setCurrentTime(formatNow());
+    }, 1000);
+
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
-    async function load() {
-      const res = await fetch(SHEET_CSV_URL);
-      const text = await res.text();
-      const data = parseCSV(text);
+    async function loadData() {
+      try {
+        const res = await fetch(SHEET_CSV_URL, { cache: "no-store" });
+        const text = await res.text();
+        const parsedRows = parseCSV(text);
 
-      setEvents(
-        data
-          .filter((r) => r.type === "event")
-          .map((r) => ({
-            type: r.type,
-            eventId: r.eventId,
-            name: r.name,
-            date: r.date,
-            startTime: r.startTime,
-            endTime: r.endTime,
-            stage: r.stage,
-            channel: r.channel,
-            link: r.link,
-          }))
-      );
+        const eventRows: EventRow[] = parsedRows
+          .filter((row) => (row.type || "").trim().toLowerCase() === "event")
+          .map((row) => ({
+            type: row.type || "",
+            eventId: row.eventId || "",
+            name: row.name || "",
+            date: row.date || "",
+            startTime: row.startTime || "",
+            endTime: row.endTime || "",
+            stage: row.stage || "",
+            channel: row.channel || "",
+            link: row.link || "",
+          }));
+
+        setRows(sortByStartTime(eventRows));
+      } catch (error) {
+        console.error("CSV fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
     }
 
-    load();
+    loadData();
   }, []);
 
-  const ongoing = events.filter(
-    (e) => getStatus(e.date, e.startTime, e.endTime) === "ongoing"
-  );
+  const ongoingEvents = useMemo(() => {
+    return rows.filter(
+      (event) => getStatus(event.date, event.startTime, event.endTime) === "ongoing"
+    );
+  }, [rows]);
 
-  const upcoming = events.filter(
-    (e) => getStatus(e.date, e.startTime, e.endTime) === "upcoming"
-  );
+  const upcomingEvents = useMemo(() => {
+    return rows.filter(
+      (event) => getStatus(event.date, event.startTime, event.endTime) === "upcoming"
+    );
+  }, [rows]);
 
-  const completed = events.filter(
-    (e) => getStatus(e.date, e.startTime, e.endTime) === "completed"
-  );
+  const completedEvents = useMemo(() => {
+    return rows.filter(
+      (event) => getStatus(event.date, event.startTime, event.endTime) === "completed"
+    );
+  }, [rows]);
 
   return (
-    <div className="min-h-screen p-4 text-white">
-      <h1 className="text-2xl font-bold">TODAY SCHEDULE</h1>
-      <p className="text-sm">{time}</p>
+    <main className="min-h-screen bg-transparent px-4 py-6 text-white md:px-8">
+      <div className="mx-auto max-w-5xl">
+        <div className="rounded-3xl border border-white/15 bg-white/8 p-5 shadow-[0_10px_40px_rgba(0,0,0,0.16)] backdrop-blur-xl">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-wide text-white">
+                TODAY SCHEDULE
+              </h1>
+              <p className="mt-1 text-sm font-semibold text-red-300">
+                iQOO TOTAL GAMING ESPORT
+              </p>
+            </div>
 
-      <Section
-        title="ONGOING"
-        color="text-red-400"
-        events={ongoing}
-        empty="There is no ongoing event"
-      />
+            <div className="rounded-2xl border border-red-400/20 bg-white/8 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md">
+              {currentTime}
+            </div>
+          </div>
+        </div>
 
-      <Section
-        title="UPCOMING"
-        color="text-yellow-400"
-        events={upcoming}
-        empty="There is no upcoming event"
-      />
+        {loading ? (
+          <div className="mt-8 rounded-2xl border border-white/15 bg-white/8 p-6 text-center text-white/70 backdrop-blur-md">
+            Loading schedule...
+          </div>
+        ) : (
+          <>
+            <EventSection
+              title="ONGOING"
+              titleColor="text-red-400"
+              emptyText="There is no ongoing event"
+              events={ongoingEvents}
+              status="ongoing"
+            />
 
-      <Section
-        title="COMPLETED"
-        color="text-green-400"
-        events={completed}
-        empty="There is no completed event"
-      />
-    </div>
+            <EventSection
+              title="UPCOMING"
+              titleColor="text-yellow-400"
+              emptyText="There is no upcoming event"
+              events={upcomingEvents}
+              status="upcoming"
+            />
+
+            <EventSection
+              title="COMPLETED"
+              titleColor="text-green-400"
+              emptyText="There is no completed event"
+              events={completedEvents}
+              status="completed"
+            />
+          </>
+        )}
+      </div>
+    </main>
   );
 }

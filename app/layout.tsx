@@ -1,5 +1,10 @@
 import "./globals.css";
 
+export const metadata = {
+  title: "iQOO Total Gaming Esports",
+  description: "Cyber Esports Arena",
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -9,8 +14,8 @@ export default function RootLayout({
     <html lang="en">
       <body>
 
-        {/* 🔥 ANIMATED HEADER FIXED */}
-        <header className="header">
+        {/* 🔥 CRAZY ANIMATED HEADER */}
+        <header className="crazy-header">
           iQOO TOTAL GAMING ESPORTS
         </header>
 

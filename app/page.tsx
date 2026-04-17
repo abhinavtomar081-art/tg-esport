@@ -20,7 +20,7 @@ export default function HomePage() {
   return (
     <div className="container">
 
-      {/* 📢 LIVE ANNOUNCEMENT */}
+      {/* 📢 ANNOUNCEMENT */}
       <div className="announcement">
         <div className="announcement-title">
           LIVE ANNOUNCEMENTS
@@ -28,7 +28,7 @@ export default function HomePage() {
         <div className="announcement-text"></div>
       </div>
 
-      {/* 🧱 3x3 GRID */}
+      {/* 🧱 GRID */}
       <div className="grid">
         {boxes.map((item, i) => (
           <div
@@ -43,8 +43,7 @@ export default function HomePage() {
         ))}
       </div>
 
-      {/* 📝 EMPTY SPACE */}
-      <div style={{ height: "60px" }}></div>
+      <div style={{ height: "60px" }} />
 
     </div>
   );

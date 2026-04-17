@@ -22,13 +22,10 @@ export default function HomePage() {
 
       {/* 📢 LIVE ANNOUNCEMENT */}
       <div className="announcement">
-
         <div className="announcement-title">
           LIVE ANNOUNCEMENTS
         </div>
-
         <div className="announcement-text"></div>
-
       </div>
 
       {/* 🧱 3x3 GRID */}
@@ -46,7 +43,7 @@ export default function HomePage() {
         ))}
       </div>
 
-      {/* 📝 EMPTY VISION SPACE */}
+      {/* 📝 EMPTY SPACE */}
       <div style={{ height: "60px" }}></div>
 
     </div>

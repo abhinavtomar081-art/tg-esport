@@ -31,9 +31,11 @@ body {
 /* 📢 ANNOUNCEMENT BOX */
 .announcement {
   margin: 20px;
-  padding: 15px;
+  padding: 25px;
   border: 1px solid #ff1e1e;
   background: #111;
+  width: 100%;
+  max-width: 100%;
 }
 
 .announcement-title {

@@ -21,7 +21,7 @@ export default function HomePage() {
     <div className="container">
 
       {/* 📢 LIVE ANNOUNCEMENT */}
-      <div className="announcement">
+      <div className="announcement w-full">
         <div className="announcement-title">LIVE ANNOUNCEMENTS</div>
         <div className="announcement-text"></div>
       </div>

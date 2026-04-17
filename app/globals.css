@@ -1,43 +1,37 @@
 body {
   margin: 0;
   padding: 0;
-  background: #0a0a0a;
-  color: white;
   font-family: "Segoe UI", sans-serif;
+  color: white;
+
+  /* 🌌 cyber arena background */
+  background: radial-gradient(circle at top, #0a0a0a, #050505);
+  overflow-x: hidden;
 }
 
-/* 📢 ANNOUNCEMENT */
-.announcement {
-  width: 600px;
-  margin: 20px auto;
+/* ✨ animated glow grid background */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 
-  padding: 30px;
-  background: #111;
+  background-image: 
+    linear-gradient(transparent 95%, rgba(0,255,255,0.08) 100%),
+    linear-gradient(90deg, transparent 95%, rgba(255,0,255,0.08) 100%);
 
-  border: 3px solid #ff1e1e;
+  background-size: 60px 60px;
+  animation: moveGrid 8s linear infinite;
 
-  position: relative;
-
-  font-family: "Arial";
+  z-index: -1;
+  opacity: 0.4;
 }
 
-/* 🏷️ TITLE INSIDE TOP CENTER */
-.announcement-title {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-
-  background: black;
-  padding: 4px 12px;
-
-  font-size: 12px;
-  font-weight: bold;
-  letter-spacing: 2px;
-
-  color: #ff1e1e;
-
-  border: 1px solid #ff1e1e;
+@keyframes moveGrid {
+  from { transform: translateY(0px); }
+  to { transform: translateY(60px); }
 }
 
 /* 🧱 GRID */
@@ -45,36 +39,48 @@ body {
   display: grid;
   grid-template-columns: repeat(3, 400px);
   justify-content: center;
-  gap: 20px;
-  margin-top: 30px;
+  gap: 25px;
+  margin-top: 60px;
 }
 
-/* 🎮 BIG RECTANGLE BOXES */
+/* ⚡ CRAZY CARDS */
 .card {
   width: 400px;
   height: 180px;
 
-  background: #111;
-  border: 2px solid #ff1e1e;
-
   display: flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
 
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 1px;
 
   cursor: pointer;
 
+  /* 🌈 glass + neon mix */
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+
+  backdrop-filter: blur(10px);
+
+  border-radius: 12px;
+
   transition: 0.3s;
 
-  border-radius: 10px;
-
-  text-align: center;
+  box-shadow:
+    0 0 10px rgba(0, 255, 255, 0.2),
+    inset 0 0 10px rgba(255, 0, 255, 0.1);
 }
 
-/* 🔥 HOVER EFFECT */
+/* 🔥 HOVER ENERGY BURST */
 .card:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 25px #ff1e1e;
+  transform: scale(1.08) rotateX(5deg);
+
+  border: 1px solid #00f5ff;
+
+  box-shadow:
+    0 0 25px #00f5ff,
+    0 0 40px #ff00ff;
 }

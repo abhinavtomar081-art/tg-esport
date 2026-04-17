@@ -20,15 +20,7 @@ export default function HomePage() {
   return (
     <div className="container">
 
-      {/* 📢 ANNOUNCEMENT */}
-      <div className="announcement">
-        <div className="announcement-title">
-          LIVE ANNOUNCEMENTS
-        </div>
-        <div className="announcement-text"></div>
-      </div>
-
-      {/* 🧱 GRID */}
+      {/* 🧱 3x3 GRID ONLY */}
       <div className="grid">
         {boxes.map((item, i) => (
           <div
@@ -42,8 +34,6 @@ export default function HomePage() {
           </div>
         ))}
       </div>
-
-      <div style={{ height: "60px" }} />
 
     </div>
   );

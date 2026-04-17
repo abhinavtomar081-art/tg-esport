@@ -6,44 +6,47 @@ body {
   font-family: Arial, sans-serif;
 }
 
-/* 🧱 MAIN GRID */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 15px;
-  padding: 20px;
-}
-
-/* 🎮 CARDS */
-.card {
-  background: #111;
-  border: 1px solid #ff1e1e;
-  padding: 20px;
+/* 🔥 HEADER (RESTORED ANIMATION + CENTER FIX) */
+.header {
   text-align: center;
-  cursor: pointer;
-  transition: 0.3s;
-  border-radius: 8px;
+  padding: 20px;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 3px;
+
+  color: #ff1e1e;
+
+  text-shadow: 0 0 10px #ff1e1e, 0 0 20px #ff5a1f;
+
+  animation: glow 2s infinite alternate;
+
+  border-bottom: 1px solid #ff1e1e;
 }
 
-.card:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 20px #ff1e1e;
+@keyframes glow {
+  from {
+    text-shadow: 0 0 10px #ff1e1e;
+  }
+  to {
+    text-shadow: 0 0 25px #ff1e1e, 0 0 40px #ff5a1f;
+  }
 }
 
-/* 📢 ANNOUNCEMENT PANEL */
+/* 📢 ANNOUNCEMENT (ONLY WIDTH + BORDER FIX) */
 .announcement {
   margin: 20px auto;
   padding: 30px;
   background: #111;
 
   width: 100%;
-  max-width: 1200px;
+  max-width: 1400px; /* 🔥 increased size */
 
-  border: 3px solid #ff1e1e;
+  border: 4px solid #ff1e1e; /* 🔥 thicker border */
+
   position: relative;
 }
 
-/* 🏷️ TOP CENTER TITLE */
+/* 🏷️ TITLE FIX */
 .announcement-title {
   position: absolute;
   top: -12px;
@@ -53,17 +56,9 @@ body {
   background: black;
   padding: 4px 14px;
 
-  font-weight: bold;
   font-size: 12px;
+  font-weight: bold;
+
   color: #ff1e1e;
-
   border: 1px solid #ff1e1e;
-  letter-spacing: 1px;
-}
-
-/* TEXT AREA */
-.announcement-text {
-  color: #aaa;
-  text-align: center;
-  font-size: 14px;
 }

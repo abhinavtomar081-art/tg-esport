@@ -1,13 +1,71 @@
-@import "tailwindcss";
-
-html {
-  scroll-behavior: smooth;
-}
-
 body {
   margin: 0;
   padding: 0;
-  background: black;
+  background: #0a0a0a;
   color: white;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Arial, sans-serif;
+}
+
+/* 🔥 HEADER ANIMATION */
+.header {
+  text-align: center;
+  padding: 20px;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: #ff1e1e;
+  text-shadow: 0 0 10px #ff1e1e, 0 0 20px #ff5a1f;
+  animation: glow 2s infinite alternate;
+  border-bottom: 1px solid #ff1e1e;
+}
+
+@keyframes glow {
+  from {
+    text-shadow: 0 0 10px #ff1e1e;
+  }
+  to {
+    text-shadow: 0 0 25px #ff1e1e, 0 0 40px #ff5a1f;
+  }
+}
+
+/* 📢 ANNOUNCEMENT BOX */
+.announcement {
+  margin: 20px;
+  padding: 15px;
+  border: 1px solid #ff1e1e;
+  background: #111;
+}
+
+.announcement-title {
+  color: #ff1e1e;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.announcement-text {
+  color: #aaa;
+}
+
+/* 🧱 GRID */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  padding: 20px;
+}
+
+/* 🎮 CARDS */
+.card {
+  background: #111;
+  border: 1px solid #ff1e1e;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: 0.3s;
+  border-radius: 8px;
+}
+
+.card:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px #ff1e1e;
 }

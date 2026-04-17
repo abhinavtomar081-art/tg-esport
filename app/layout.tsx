@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "iQOO Total Gang Esports",
+  title: "iQOO Total Gaming Esports",
   description: "Esports Gaming Team Website",
 };
 
@@ -16,7 +16,7 @@ export default function RootLayout({
 
         {/* 🔥 HEADER */}
         <header className="header">
-          iQOO TOTAL GANG ESPORTS
+          iQOO TOTAL GAMING ESPORTS
         </header>
 
         {children}
